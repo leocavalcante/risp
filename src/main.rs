@@ -1,12 +1,15 @@
+use std::fs::File;
+
+use clap::{App, Arg, SubCommand};
+use csv::StringRecordsIter;
 use rand::seq::IteratorRandom;
 
 type Whoops<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
-fn rand(path: &String, value: &String) -> Whoops {
-    let value: usize = value.parse()?;
+fn rand(records: StringRecordsIter<File>, value: usize) -> Whoops {
     let mut rng = rand::thread_rng();
 
-    rdr.records()
+    records
         .choose_multiple(&mut rng, value).iter()
         .flat_map(|result| result)
         .map(|record| record.as_slice())
@@ -16,20 +19,40 @@ fn rand(path: &String, value: &String) -> Whoops {
 }
 
 fn eval() -> Whoops {
-    let args = std::env::args();
-    let args: Vec<String> = args.collect();
+    let matches = App::new("risp")
+        .version("0.1.0")
+        .about("(rust-based-tool (to-work-with (lists))")
+        .author("Leo Cavalcante")
+        .arg(Arg::with_name("input")
+            .help("File path")
+            .required(true)
+            .index(1))
+        .arg(Arg::with_name("delimiter")
+            .help("File delimiter")
+            .takes_value(true)
+            .short("d").long("delimiter"))
+        .subcommand(SubCommand::with_name("rand")
+            .about("Gets random values from the list")
+            .arg(Arg::with_name("amount").required(true).index(1)))
+        .get_matches();
 
-    let input_path = args.get(1).ok_or("input file is missing")?;
-    let command = args.get(2).ok_or("command not provided")?;
+    let path = matches.value_of("input").ok_or("no input provided")?;
+    let delimiter = matches.value_of("delimiter").unwrap_or(",");
 
-    match command.as_str() {
-        "rand" => rand(input_path, args.get(3).ok_or("rand value not provided")?),
-        _ => {
-            return Err(format!("command {} not found", command).into());
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .delimiter(*delimiter.as_bytes().get(0).unwrap())
+        .from_path(path)?;
+
+    match matches.subcommand() {
+        ("rand", args) => {
+            let args = args.unwrap();
+            let amount = args.value_of("amount");
+            let amount = amount.unwrap();
+            rand(rdr.records(), amount.parse().unwrap())
         }
-    }?;
-
-    Ok(())
+        _ => Err("command not found".into())
+    }
 }
 
 fn main() {
