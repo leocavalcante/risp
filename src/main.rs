@@ -8,12 +8,14 @@ type Whoops<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 fn rand(records: StringRecordsIter<File>, value: usize) -> Whoops {
     let mut rng = rand::thread_rng();
+    let mut wrt = csv::Writer::from_writer(vec![]);
 
     records
         .choose_multiple(&mut rng, value).iter()
         .flat_map(|result| result)
-        .map(|record| record.as_slice())
-        .for_each(|slice| println!("{}", slice));
+        .for_each(|record| wrt.write_record(record).unwrap());
+
+    print!("{}", String::from_utf8(wrt.into_inner()?)?);
 
     Ok(())
 }
@@ -40,7 +42,7 @@ fn eval() -> Whoops {
     let delimiter = matches.value_of("delimiter").unwrap_or(",");
 
     let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(false)
+        .has_headers(true)
         .delimiter(*delimiter.as_bytes().get(0).unwrap())
         .from_path(path)?;
 
