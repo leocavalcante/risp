@@ -20,6 +20,19 @@ fn rand(records: StringRecordsIter<File>, value: usize) -> Whoops {
     Ok(())
 }
 
+fn pick(records: StringRecordsIter<File>, index: usize) -> Whoops {
+    let mut wrt = csv::Writer::from_writer(vec![]);
+
+    records
+        .flat_map(|result| result)
+        .flat_map(|record| record.get(index).map(|str| str.to_string()))
+        .for_each(|value| wrt.write_record(&[value]).unwrap());
+
+    print!("{}", String::from_utf8(wrt.into_inner()?)?);
+
+    Ok(())
+}
+
 fn eval() -> Whoops {
     let matches = App::new("risp")
         .version("0.1.0")
@@ -36,6 +49,9 @@ fn eval() -> Whoops {
         .subcommand(SubCommand::with_name("rand")
             .about("Gets random values from the list")
             .arg(Arg::with_name("amount").required(true).index(1)))
+        .subcommand(SubCommand::with_name("pick")
+            .about("Pick a single column from the list")
+            .arg(Arg::with_name("index").required(true).index(1)))
         .get_matches();
 
     let path = matches.value_of("input").ok_or("no input provided")?;
@@ -51,7 +67,15 @@ fn eval() -> Whoops {
             let args = args.unwrap();
             let amount = args.value_of("amount");
             let amount = amount.unwrap();
+
             rand(rdr.records(), amount.parse().unwrap())
+        }
+        ("pick", args) => {
+            let args = args.unwrap();
+            let index = args.value_of("index");
+            let index = index.unwrap();
+
+            pick(rdr.records(), index.parse().unwrap())
         }
         _ => Err("command not found".into())
     }
