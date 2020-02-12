@@ -33,6 +33,23 @@ fn pick(records: StringRecordsIter<File>, index: usize) -> Whoops {
     Ok(())
 }
 
+fn split(records: StringRecordsIter<File>, by: usize, step: usize) -> Whoops {
+    let mut wrt = csv::Writer::from_writer(vec![]);
+
+    records
+        .flat_map(|result| result)
+        .enumerate()
+        .for_each(|(index, record)| {
+            if index % by == step {
+                wrt.write_record(record.iter()).unwrap()
+            }
+        });
+
+    print!("{}", String::from_utf8(wrt.into_inner()?)?);
+
+    Ok(())
+}
+
 fn eval() -> Whoops {
     let matches = App::new("risp")
         .version("0.1.0")
@@ -52,6 +69,10 @@ fn eval() -> Whoops {
         .subcommand(SubCommand::with_name("pick")
             .about("Pick a single column from the list")
             .arg(Arg::with_name("index").required(true).index(1)))
+        .subcommand(SubCommand::with_name("split")
+            .about("Splits the list [by] return a [step]")
+            .arg(Arg::with_name("by").required(true).index(1))
+            .arg(Arg::with_name("step").required(true).index(2)))
         .get_matches();
 
     let path = matches.value_of("input").ok_or("no input provided")?;
@@ -76,6 +97,15 @@ fn eval() -> Whoops {
             let index = index.unwrap();
 
             pick(rdr.records(), index.parse().unwrap())
+        }
+        ("split", args) => {
+            let args = args.unwrap();
+            let by = args.value_of("by");
+            let by = by.unwrap();
+            let step = args.value_of("step");
+            let step = step.unwrap();
+
+            split(rdr.records(), by.parse().unwrap(), step.parse().unwrap())
         }
         _ => Err("command not found".into())
     }
