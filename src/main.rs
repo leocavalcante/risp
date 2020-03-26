@@ -1,7 +1,7 @@
 use std::fs::File;
 
 use clap::{App, Arg, SubCommand};
-use csv::StringRecordsIter;
+use csv::{StringRecord, StringRecordsIter};
 use rand::seq::IteratorRandom;
 
 type Whoops<T = ()> = Result<T, Box<dyn std::error::Error>>;
@@ -50,6 +50,31 @@ fn split(records: StringRecordsIter<File>, by: usize, step: usize) -> Whoops {
     Ok(())
 }
 
+fn chunk(records: StringRecordsIter<File>, size: usize, prefix: &str, headers: StringRecord) -> Whoops {
+    let chunks = records.collect::<Vec<_>>();
+    let chunks = chunks
+        .chunks(size)
+        .enumerate()
+        .map(|(index, records)| {
+            let filename = format!("{}_{}.csv", prefix, index + 1);
+            let mut wtr = csv::Writer::from_path(&filename)?;
+
+            wtr.write_record(headers.iter()).unwrap();
+
+            records
+                .iter()
+                .flat_map(|result| result)
+                .for_each(|record| wtr.write_record(record).unwrap());
+
+            wtr.flush()
+        })
+        .collect::<Vec<_>>();
+
+    println!("{} chunks", chunks.len());
+
+    Ok(())
+}
+
 fn eval() -> Whoops {
     let matches = App::new("risp")
         .version("0.1.0")
@@ -73,6 +98,10 @@ fn eval() -> Whoops {
             .about("Splits the list [by] return a [step]")
             .arg(Arg::with_name("by").required(true).index(1))
             .arg(Arg::with_name("step").required(true).index(2)))
+        .subcommand(SubCommand::with_name("chunk")
+            .about("Chunks the list by [size] write to [prefix]")
+            .arg(Arg::with_name("size").required(true).index(1))
+            .arg(Arg::with_name("prefix").required(true).index(2)))
         .get_matches();
 
     let path = matches.value_of("input").ok_or("no input provided")?;
@@ -82,6 +111,8 @@ fn eval() -> Whoops {
         .has_headers(true)
         .delimiter(*delimiter.as_bytes().get(0).unwrap())
         .from_path(path)?;
+
+    let headers = rdr.headers()?.clone();
 
     match matches.subcommand() {
         ("rand", args) => {
@@ -106,6 +137,15 @@ fn eval() -> Whoops {
             let step = step.unwrap();
 
             split(rdr.records(), by.parse().unwrap(), step.parse().unwrap())
+        }
+        ("chunk", args) => {
+            let args = args.unwrap();
+            let size = args.value_of("size");
+            let size = size.unwrap();
+            let prefix = args.value_of("prefix");
+            let prefix = prefix.unwrap();
+
+            chunk(rdr.records(), size.parse().unwrap(), prefix, headers)
         }
         _ => Err("command not found".into())
     }
