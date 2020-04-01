@@ -1,6 +1,8 @@
 use std::fs::File;
 
-use clap::{App, Arg, SubCommand};
+#[macro_use]
+extern crate clap;
+use clap::App;
 use csv::{StringRecord, StringRecordsIter};
 use rand::seq::IteratorRandom;
 
@@ -76,33 +78,8 @@ fn chunk(records: StringRecordsIter<File>, size: usize, prefix: &str, headers: S
 }
 
 fn eval() -> Whoops {
-    let matches = App::new("risp")
-        .version("0.1.0")
-        .about("(rust-based-tool (to-work-with (lists))")
-        .author("Leo Cavalcante")
-        .arg(Arg::with_name("input")
-            .help("File path")
-            .required(true)
-            .index(1))
-        .arg(Arg::with_name("delimiter")
-            .help("File delimiter")
-            .takes_value(true)
-            .short("d").long("delimiter"))
-        .subcommand(SubCommand::with_name("rand")
-            .about("Gets random values from the list")
-            .arg(Arg::with_name("amount").required(true).index(1)))
-        .subcommand(SubCommand::with_name("pick")
-            .about("Pick a single column from the list")
-            .arg(Arg::with_name("index").required(true).index(1)))
-        .subcommand(SubCommand::with_name("split")
-            .about("Splits the list [by] return a [step]")
-            .arg(Arg::with_name("by").required(true).index(1))
-            .arg(Arg::with_name("step").required(true).index(2)))
-        .subcommand(SubCommand::with_name("chunk")
-            .about("Chunks the list by [size] write to [prefix]")
-            .arg(Arg::with_name("size").required(true).index(1))
-            .arg(Arg::with_name("prefix").required(true).index(2)))
-        .get_matches();
+    let yaml = load_yaml!("risp_cli.yml");
+    let matches = App::from_yaml(yaml).get_matches();
 
     let path = matches.value_of("input").ok_or("no input provided")?;
     let delimiter = matches.value_of("delimiter").unwrap_or(",");
