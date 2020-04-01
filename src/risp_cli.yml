@@ -1,0 +1,45 @@
+name: risp
+version: "0.1.0"
+author: Leo Cavalcante
+about: (rust-based-tool (to-work-with (lists))
+args:
+    - input:
+        help: File path
+        required: true
+        index: 1
+    - delimiter:
+        help: File delimiter
+        takes_value: true
+        short: d
+        long: delimiter
+subcommands:
+    - rand:
+        about: Gets random values from the list
+        args:
+            - amount:
+                required: true
+                index: 1
+    - pick:
+        about: Pick a single column from the list
+        args:
+            - index:
+                required: true
+                index: 1
+    - split:
+        about: Splits the list [by] return a [step]
+        args:
+            - by:
+                required: true
+                index: 1
+            - step:
+                required: true
+                index: 2
+    - chunk:
+        about: Chunks the list by [size] write to [prefix]
+        args:
+            - size:
+                required: true
+                index: 1
+            - prefix:
+                required: true
+                index: 2
