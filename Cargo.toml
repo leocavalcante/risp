@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 csv = "1.1"
 rand = "0.7"
-clap = "2.33"
+clap = {version = "~2.33.0", features = ["yaml"]}
